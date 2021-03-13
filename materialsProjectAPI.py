@@ -1,4 +1,4 @@
-from pymatgen import MPRester
+from pmatgen import MPRester
 import requests
 import pandas as pd
 import plotly.graph_objects as go
