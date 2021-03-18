@@ -5,7 +5,7 @@ from urllib.request import urlopen
 from itertools import combinations
 import plotly.graph_objects as go
 import math
-
+from scipy.spatial import ConvexHull
 
 def get_data_from_database(composition, database):
     if database == 'af':
@@ -98,7 +98,7 @@ def list_to_dataframe(dictionary_list, column = None):
     return df
 
 
-def show_phase_diagram(df, composition, formation_e_range, database):
+def show_phase_diagram(df, composition, formation_e_range, database, figure_return = False):
     if database == 'af':
         customdata = ["compound"] + composition + ["enthalpy_formation_atom", 'auid']
         title = "phase diagram"+"("+",".join(composition)+")"+"-Aflow"
@@ -188,7 +188,10 @@ def show_phase_diagram(df, composition, formation_e_range, database):
                           )
         df.pop("x")
         df.pop("y")
-    fig.show()
+    if figure_return:
+        return fig
+    else:
+        fig.show()
 
 if __name__ == "__main__":
     composition = ["Ni", "Fe"]
