@@ -22,11 +22,12 @@ class APIRester():
             self.formation_column_name = "formation_energy_per_atom"
             self.id_name = 'material_id'
         elif self.database == 'oq':
-            pass
+            self.formation_column_name = "delta_e"
+            self.id_name = "entry_id"
         else:
             pass
-
-        self.np_hull, self.point_list = self.get_convex_elements()
+        if database != "oq":
+            self.np_hull, self.point_list = self.get_convex_elements()
 
     def get_convex_elements(self):
 
@@ -104,7 +105,7 @@ class APIRester():
             DIRECTIVES = "$paging(0)"
             SUMMONS = MATCHBOOK + "," + DIRECTIVES
             response = json.loads(urlopen(SERVER + API + SUMMONS).read().decode("utf-8"))
-        if self.database == 'mp':
+        elif self.database == 'mp':
             data = {
                 'criteria': {
                     'elements': {'$all': selected_composition},
@@ -115,6 +116,7 @@ class APIRester():
                     'material_id',
                     'formula',
                     'formation_energy_per_atom',
+                    'e_above_hull',
                 ]
             }
             r = requests.post('https://materialsproject.org/rest/v2/query',
@@ -122,7 +124,13 @@ class APIRester():
                               data={k: json.dumps(v) for k, v in data.items()})
             response_content = r.json()
             response = response_content['response']
-
+        elif self.database == 'oq':
+            compo = ",".join(selected_composition)
+            column_list = ["name", "entry_id", "spacegroup", "ntypes", "band_gap", "delta_e", "stability"]
+            query = "http://oqmd.org/oqmdapi/formationenergy?fields=" + ','.join(
+                column_list) + "&filter=element_set=("+compo+") AND ntypes=" + str(len(selected_composition))
+            reg = requests.get(query).json()
+            response = reg["data"]
         return response
 
     def get_every_combination(self, composition_list):
@@ -169,6 +177,13 @@ class APIRester():
             df = self.list_to_dataframe(dictionary_list,column = dataframe_keys)
             for atom in self.composition:
                 df[atom] = df[atom].fillna(0)
+            return df
+        elif self.database == "oq":
+            dictionary_list = []
+            for selected_composition in composition_combination:
+                dictionary_list += self.get_data_from_database(selected_composition)
+            dataframe_keys = list(dictionary_list[0].keys())
+            df = self.list_to_dataframe(dictionary_list, column=dataframe_keys)
             return df
 
     def list_to_dataframe(self, dictionary_list, column = None):
@@ -310,7 +325,7 @@ class APIRester():
 
 if __name__ == "__main__":
     composition = ["Ni", "Fe"]
-    Rester = APIRester(composition, 'af')
-    Rester.show_phase_diagram([-0.2, 0.1])
+    Rester = APIRester(composition, 'oq')
+    print(Rester.df)
 
 
